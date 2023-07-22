@@ -19,6 +19,7 @@ import {
   fetchSyncStatus,
   saveSyncStatus,
 } from "./utils";
+import * as moment from "moment";
 
 class MemosSync {
   private mode: string | undefined;
@@ -269,12 +270,14 @@ class MemosSync {
   ): Promise<BlockEntity | PageEntity> {
     const blocks = await logseq.Editor.getPageBlocksTree(page);
 
+    // 注意,这里如果生成了 uuid 之类的就会找不到哦.
     const inboxBlock = blocks.find((block: { content: string }) => {
       console.log(block);
       return block.content === inboxName;
     });
 
     if (!inboxBlock) {
+      console.log("没有发现 block")
       const newInboxBlock = await logseq.Editor.appendBlockInPage(
         page,
         inboxName
@@ -295,11 +298,45 @@ class MemosSync {
       memo,
       preferredDateFormat
     );
+
+    console.log(`this is the origin got uuid: ${parentBlock?.uuid}`)
     if (!parentBlock) {
       throw "Not able to create parent Block";
     }
+
+    const parentContentBlock = await logseq.Editor.getBlock(parentBlock.uuid, {includeChildren: true})
+    // 将 parentContentBlock 中的 children 属性里第一层 content 中的类似 00:00 这样的开头的时间解析出来.
+    const Childrens = parentContentBlock?.children as BlockEntity[]
+
+    //TODO: 这里应该可以优化一下
+    let uuid_insert = parentBlock.uuid
+    let sibling = false
+
+    console.log(`origin uuid is : ${uuid_insert}`)
+
+    const createDate = new Date(memo.createdTs * 1000);
+    const memos_time = `${format(createDate, "HH:mm")}`;
+
+    if(Childrens!=undefined) {
+      for (let i = 0; i < Childrens?.length; i++) {
+        const time =  Childrens[i].content.match(/^(\d{2}:\d{2})/)?.[0]
+        const current = moment(time, 'HH:mm')
+        const memosDate = moment(memos_time, 'HH:mm')
+
+        if(current.isAfter(memosDate)) {
+          break
+        }
+
+        if(current.isBefore(memosDate)){
+          sibling = true
+          uuid_insert = Childrens[i].uuid
+        }
+      }
+    }
+
+
     await logseq.Editor.insertBatchBlock(
-      parentBlock.uuid,
+      uuid_insert,
       memoContentGenerate(
         memo,
         preferredTodo,
@@ -307,8 +344,10 @@ class MemosSync {
           this.flat &&
           memo.visibility.toLowerCase() === Visibility.Private.toLowerCase()
       ),
-      { sibling: false }
+      { sibling }
     );
+
+    // if memos containers file, add it!
   }
 
   private async updateMemos(

@@ -32,15 +32,32 @@ export const memoContentGenerate = (
     `${BREAK_LINE}DONE $1 ${BREAK_LINE}`
   );
   const result = content.split(BREAK_LINE).filter((item) => !!item.trim());
+  const createDate = new Date(memo.createdTs * 1000);
+  // 这里返回的是一串,但是在我这里应该是不存在这么多的吧? 主要还是要处理 TODO 的情况,我觉得暂时先这样.
+
+  const children:IBatchBlock[] = [];
+  // if memos resource length is not 0
+  if(memo.resourceList.length > 0) {
+    for(let i = 0; i < memo.resourceList.length; i++) {
+      let resource = memo.resourceList[i];
+      children.push({
+        content: `![${resource.filename}](${resource.externalLink})`,
+      })
+    }
+  }
+
+
   return result
     .filter((item) => !!item.trim())
     .map((item) => {
-      const data: IBatchBlock = { content: item, properties: {} };
-      if (withProperties) {
-        data.properties = {
-          "memo-id": memo.id,
-        };
-      }
+      const data: IBatchBlock = { content: `${format(createDate, "HH:mm")} ${item}`, properties: {
+        "memo-id": memo.id,
+      },children };
+      // if (withProperties) {
+      //   data.properties = {
+      //     "memo-id": memo.id,
+      //   };
+      // }
       return data;
     });
 };

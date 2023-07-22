@@ -42,7 +42,7 @@ export default class MemosClient {
     limit: number,
     offset: number
   ): Promise<Memo[]> {
-    const url = new URL(`${this.host}/api/memo`);
+    const url = new URL(`${this.host}/api/v1/memo`);
     url.searchParams.append("openId", String(this.openId));
     if (!includeArchive) {
       url.searchParams.append("rowStatus", "NORMAL");
@@ -60,7 +60,7 @@ export default class MemosClient {
     memoId: number,
     payload: Record<string, any>
   ): Promise<Memo> {
-    const url = new URL(`${this.host}/api/memo/${memoId}`);
+    const url = new URL(`${this.host}/api/v1/memo/${memoId}`);
     url.searchParams.append("openId", String(this.openId));
     try {
       return await this.request<Memo>(url.toString(), "PATCH", payload);
@@ -74,7 +74,7 @@ export default class MemosClient {
       content: content,
       visibility: visibility,
     };
-    const url = new URL(`${this.host}/api/memo`);
+    const url = new URL(`${this.host}/api/v1/memo`);
     url.searchParams.append("openId", String(this.openId));
     try {
       return await this.request<Memo>(url.toString(), "POST", payload);
